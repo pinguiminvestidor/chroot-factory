@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+# Automation script to build a decent basic chroot environment to do terminal 
+# work. It installs bash, a few programs and their dependencies in the 
+# designated chroot.
+#
+# To start, please change the first line of the file into your desired chroot
+# environment (directory). This script will find and copy dependencies there.
+#
+
+# --- --- SETTINGS --- --- 
+
+# Set this to your chroot sandbox: 
+DIR=""
+
+# This default toolkit should work quite well. Edit it to taste!
+# Just note one thing: these will be *copied* from the host machine, so they
+# MUST be installed in the system in first place! 
+PROGRAMS="bash ls rm cp mv less mkdir chmod chown cat"
+
+# --- --- /SETTINGS --- --- 
+
+if [ -z "$DIR" ]
+then
+    echo "Please specify a working directory in the settings of this program."
+    exit 1
+fi
+
+# I will not clobber anything that already exists. Perhaps with an -f option?
+if [ -d "$DIR" ]
+then
+    echo "Warning: directory $DIR already exists."
+    echo "Creating a chroot environment there is likely to break a lot of things."
+    echo "Please select a new directory to chroot into"
+    exit 1
+fi
+
+echo "Creating new chroot environment..."
+mkdir -p "$DIR" || exit 1
+mkdir -p "$DIR"/{bin,lib,lib64,etc,root} || exit 1
+# This one might be needed for some low-level access on x86 systems
+mkdir -p "$DIR"/lib/x86_64-linux-gnu
+
+echo "Installing chroot programs and dependencies..."
+
+for program in $PROGRAMS
+do
+    if [ -n "$(which $program)" ]
+    then
+        echo "Installing $program..."
+        cp $(which $program) "$DIR"/bin
+        dependencies=$(ldd $(which $program) | egrep -o '/lib.*\.[0-9]')
+        
+        echo "Installing dependencies for $program..."
+        for dep in $dependencies
+        do
+            cp "$dep" "${DIR}${dep}" || exit 1
+        done
+    else
+        echo "Error: you do not have the program $program installed."
+        echo "We cannot copy it in the chroot."
+        echo "Please install it in your own system and try again."
+        exit 1
+    fi
+done
+
+# In order to make that terminal usable, some basic .bashrc is needed:
+echo "Installing basic configuration files..."
+mkdir -p "$DIR"/usr/share/terminfo/r
+cp /lib/terminfo/r/rxvt "$DIR"/usr/share/terminfo/r/
+
+echo "export TERM=rxvt" > "$DIR"/root/.bashrc
+
+echo "*** New chroot environment available under $DIR ***"
+echo "Log in via: sudo chroot $DIR /bin/bash"
