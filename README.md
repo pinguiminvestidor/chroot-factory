@@ -11,4 +11,4 @@ This by no means creates absolutely secure chroot environments or sandboxes comp
 ## Todo list
 
  - `buildchroot`: "bootstrap" script to launch your chroot in one command. (DONE)
- - `addtochroot`: "installer" of existing applications in chroot environment
+ - `addtochroot`: "installer" of existing applications in chroot environment (DONE)
