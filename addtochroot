@@ -1,0 +1,82 @@
+#!/bin/bash
+#
+# An "installer" of programs into a chrooted environment. Aim here is to take
+# away as much as pain as possible from manually copying dependencies for 
+# binaries to work correctly.
+#
+# This program is part of chroot-factory - an automation suite for chroot
+#
+
+# --- --- SETTINGS --- ---
+
+# Change this to your chrooted environment:
+DIR=""
+
+# --- --- /SETTINGS --- ---
+
+PROGRAMS=""
+
+helper() {
+    cat <<EOF
+`basename $0` [OPTION]
+An "installer" of programs into a chrooted environment. Aim here is to take
+away as much as pain as possible from manually copying dependencies for 
+binaries to work correctly.
+
+This program is part of chroot-factory - an automation suite for chroot
+EOF
+}
+
+testprogram() {
+    # shorthand to find out whether program $1 exists...
+    if [ -z $(which $1) ]
+    then
+        echo "Error: program $1 not found"
+        echo "Are you sure it's installed in your system or is not a shell extension?"
+
+        # ... and break execution if it doesn't!
+        exit 1
+    fi
+}
+
+# Get command-line options
+while [ -n "$1" ]
+do
+    if [ $(printf ${1:0:1}) == "-" ] # flags begin with '-'
+    then
+        case "$1" in
+            "-h" | "--help" )
+                helper
+                exit 0
+            ;;
+            * )
+                echo "Error: unknown argument $1"
+                helper
+                exit 1
+            ;;
+        esac
+    else
+        # This should be a program to install in the chroot. Add to list.
+        PROGRAMS="$PROGRAMS $1"
+    fi
+    shift
+done
+
+# Debug:
+# echo "This is your program list: "
+for prog in $PROGRAMS
+do
+    testprogram $prog
+    dependencies=$(ldd $(which $prog) | egrep -o '/lib.*\.[0-9]')
+    
+    echo "Installing dependencies for $prog..."
+    for dep in $dependencies
+    do
+        cp -v "$dep" "${DIR}${dep}" || exit 1
+    done
+    cp $(which $prog) "$DIR"/bin || exit 1
+
+    echo "Program $prog installed."
+done
+
+exit 0

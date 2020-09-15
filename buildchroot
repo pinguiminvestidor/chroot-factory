@@ -54,7 +54,7 @@ do
         echo "Installing dependencies for $program..."
         for dep in $dependencies
         do
-            cp "$dep" "${DIR}${dep}" || exit 1
+            cp -v "$dep" "${DIR}${dep}" || exit 1
         done
     else
         echo "Error: you do not have the program $program installed."
