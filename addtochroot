@@ -67,12 +67,13 @@ done
 for prog in $PROGRAMS
 do
     testprogram $prog
-    dependencies=$(ldd $(which $prog) | egrep -o '/lib.*\.[0-9]')
+    dependencies=$(ldd $(which $prog) | egrep -o '/lib.*\ ')
     
     echo "Installing dependencies for $prog..."
     for dep in $dependencies
     do
-        cp -v "$dep" "${DIR}${dep}" || exit 1
+        # --parents flag means that directories are created as needed
+        cp --parents "$dep" "${DIR}" || exit 1
     done
     cp $(which $prog) "$DIR"/bin || exit 1
 

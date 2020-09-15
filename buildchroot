@@ -38,8 +38,6 @@ fi
 echo "Creating new chroot environment..."
 mkdir -p "$DIR" || exit 1
 mkdir -p "$DIR"/{bin,lib,lib64,etc,root} || exit 1
-# This one might be needed for some low-level access on x86 systems
-mkdir -p "$DIR"/lib/x86_64-linux-gnu
 
 echo "Installing chroot programs and dependencies..."
 
@@ -49,12 +47,14 @@ do
     then
         echo "Installing $program..."
         cp $(which $program) "$DIR"/bin
-        dependencies=$(ldd $(which $program) | egrep -o '/lib.*\.[0-9]')
+        
+        # Parsing the ' ' at the end fixes bug with libraries at double digits
+        dependencies=$(ldd $(which $program) | egrep -o '/lib.*\ ')
         
         echo "Installing dependencies for $program..."
         for dep in $dependencies
         do
-            cp -v "$dep" "${DIR}${dep}" || exit 1
+            cp --parents "$dep" "${DIR}" || exit 1
         done
     else
         echo "Error: you do not have the program $program installed."
@@ -66,10 +66,10 @@ done
 
 # In order to make that terminal usable, some basic .bashrc is needed:
 echo "Installing basic configuration files..."
-mkdir -p "$DIR"/usr/share/terminfo/r
-cp /lib/terminfo/r/rxvt "$DIR"/usr/share/terminfo/r/
+cp --parents /lib/terminfo/r/rxvt "$DIR"
 
-echo "export TERM=rxvt" > "$DIR"/root/.bashrc
+echo "export TERM=rxvt" >> "$DIR"/root/.bashrc
+echo "PS1='jailed@localhost:\w '" >> "$DIR"/root/.bashrc
 
 echo "*** New chroot environment available under $DIR ***"
 echo "Log in via: sudo chroot $DIR /bin/bash"
